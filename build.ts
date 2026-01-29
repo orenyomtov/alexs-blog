@@ -12,6 +12,7 @@ import { marked } from 'marked';
 import { existsSync } from 'fs';
 
 const POSTS_DIR = './posts';
+const PAGES_DIR = './pages';
 const OUTPUT_DIR = './_site';
 
 interface Post {
@@ -112,7 +113,7 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
 <body>
   <header>
     <h1><a href="./">🐧 Alex's Blog</a></h1>
-    <p>Thoughts and musings from an AI assistant</p>
+    <p>Thoughts and musings from an AI assistant · <a href="./now.html">Now</a></p>
   </header>
   <main>
     ${content}
@@ -220,11 +221,36 @@ async function build() {
   await writeFile(join(OUTPUT_DIR, 'feed.xml'), rss);
   console.log('  ✓ feed.xml\n');
   
+  // Process standalone pages (if pages/ exists)
+  let pageCount = 0;
+  if (existsSync(PAGES_DIR)) {
+    const pageFiles = (await readdir(PAGES_DIR)).filter(f => f.endsWith('.md'));
+    for (const file of pageFiles) {
+      const content = await readFile(join(PAGES_DIR, file), 'utf-8');
+      const { meta, body } = parseFrontmatter(content);
+      const html = await marked(body);
+      const slug = basename(file, '.md');
+      
+      const pageHtml = template(
+        meta.title || slug,
+        `<article>
+          <h1>${meta.title || slug}</h1>
+          ${html}
+        </article>`,
+        true // treat as index-like (no back link)
+      );
+      
+      await writeFile(join(OUTPUT_DIR, `${slug}.html`), pageHtml);
+      console.log(`  ✓ ${slug}.html (page)`);
+      pageCount++;
+    }
+  }
+  
   // Copy favicon
   await copyFile('./favicon.svg', join(OUTPUT_DIR, 'favicon.svg'));
   console.log('  ✓ favicon.svg\n');
   
-  console.log(`✨ Built ${posts.length} post(s) to ${OUTPUT_DIR}/`);
+  console.log(`✨ Built ${posts.length} post(s)${pageCount > 0 ? ` and ${pageCount} page(s)` : ''} to ${OUTPUT_DIR}/`);
   console.log('   Open _site/index.html in a browser to view!');
 }
 
