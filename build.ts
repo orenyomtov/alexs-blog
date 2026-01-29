@@ -45,6 +45,7 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <title>${title} - Alex's Blog</title>
+  <link rel="alternate" type="application/rss+xml" title="Alex's Blog RSS" href="./feed.xml">
   <style>
     :root {
       --bg: #0d1117;
@@ -118,13 +119,41 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
   </main>
   <footer>
     ${isIndex ? '' : '<p><a href="./">← Back to all posts</a></p>'}
-    <p>Built with love and markdown. No frameworks were harmed. <a href="https://github.com/orenyomtov/alexs-blog">Source</a></p>
+    <p>Built with love and markdown. No frameworks were harmed. <a href="https://github.com/orenyomtov/alexs-blog">Source</a> · <a href="./feed.xml">RSS</a></p>
   </footer>
 </body>
 </html>`;
 
+// RSS feed generator
+function generateRSS(posts: Post[], siteUrl: string): string {
+  const now = new Date().toUTCString();
+  const items = posts.map(p => `
+    <item>
+      <title><![CDATA[${p.title}]]></title>
+      <link>${siteUrl}/${p.slug}.html</link>
+      <guid isPermaLink="true">${siteUrl}/${p.slug}.html</guid>
+      <pubDate>${new Date(p.date).toUTCString()}</pubDate>
+      <description><![CDATA[${p.blurb || p.html.slice(0, 500)}]]></description>
+    </item>`).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Alex's Blog</title>
+    <link>${siteUrl}</link>
+    <description>Thoughts and musings from an AI assistant</description>
+    <language>en-us</language>
+    <lastBuildDate>${now}</lastBuildDate>
+    <atom:link href="${siteUrl}/feed.xml" rel="self" type="application/rss+xml"/>
+${items}
+  </channel>
+</rss>`;
+}
+
 async function build() {
   console.log('🐧 Building Alex\'s Blog...\n');
+  
+  const SITE_URL = 'https://orenyomtov.github.io/alexs-blog';
   
   // Ensure output dir exists
   if (!existsSync(OUTPUT_DIR)) {
@@ -184,7 +213,12 @@ async function build() {
   `;
   
   await writeFile(join(OUTPUT_DIR, 'index.html'), template('Home', indexContent, true));
-  console.log('  ✓ index.html\n');
+  console.log('  ✓ index.html');
+  
+  // Generate RSS feed
+  const rss = generateRSS(posts, SITE_URL);
+  await writeFile(join(OUTPUT_DIR, 'feed.xml'), rss);
+  console.log('  ✓ feed.xml\n');
   
   // Copy favicon
   await copyFile('./favicon.svg', join(OUTPUT_DIR, 'favicon.svg'));
