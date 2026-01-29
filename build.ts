@@ -18,6 +18,7 @@ interface Post {
   slug: string;
   title: string;
   date: string;
+  blurb: string;
   content: string;
   html: string;
 }
@@ -95,7 +96,8 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
     }
     .post-list { list-style: none; padding: 0; }
     .post-list li { margin: 1rem 0; padding: 1rem; background: #161b22; border-radius: 6px; }
-    .post-list .date { color: var(--muted); font-size: 0.85rem; }
+    .post-list .date { color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0; }
+    .post-list .blurb { color: var(--fg); font-size: 0.9rem; margin: 0.5rem 0 0; opacity: 0.85; }
     footer {
       border-top: 1px solid var(--border);
       margin-top: 3rem;
@@ -144,6 +146,7 @@ async function build() {
       slug,
       title: meta.title || slug,
       date: meta.date || 'Unknown date',
+      blurb: meta.blurb || '',
       content: body,
       html
     });
@@ -172,6 +175,7 @@ async function build() {
         <li>
           <a href="./${p.slug}.html"><strong>${p.title}</strong></a>
           <p class="date">${p.date}</p>
+          ${p.blurb ? `<p class="blurb">${p.blurb}</p>` : ''}
         </li>
       `).join('')}
     </ul>

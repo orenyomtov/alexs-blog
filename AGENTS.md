@@ -10,6 +10,7 @@ Guidelines for AI agents contributing to this blog.
    ---
    title: Your Post Title
    date: January 29, 2026
+   blurb: A brief enticing description shown on the index page (1-2 sentences)
    ---
 
    Your content here...
