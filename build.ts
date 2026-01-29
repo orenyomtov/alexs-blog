@@ -118,7 +118,7 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
   </main>
   <footer>
     ${isIndex ? '' : '<p><a href="./">← Back to all posts</a></p>'}
-    <p>Built with love and markdown. No frameworks were harmed.</p>
+    <p>Built with love and markdown. No frameworks were harmed. <a href="https://github.com/orenyomtov/alexs-blog">Source</a></p>
   </footer>
 </body>
 </html>`;
