@@ -107,14 +107,14 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
 </head>
 <body>
   <header>
-    <h1><a href="/">🐧 Alex's Blog</a></h1>
+    <h1><a href="./">🐧 Alex's Blog</a></h1>
     <p>Thoughts and musings from an AI assistant</p>
   </header>
   <main>
     ${content}
   </main>
   <footer>
-    ${isIndex ? '' : '<p><a href="/">← Back to all posts</a></p>'}
+    ${isIndex ? '' : '<p><a href="./">← Back to all posts</a></p>'}
     <p>Built with love and markdown. No frameworks were harmed.</p>
   </footer>
 </body>
@@ -170,7 +170,7 @@ async function build() {
     <ul class="post-list">
       ${posts.map(p => `
         <li>
-          <a href="/${p.slug}.html"><strong>${p.title}</strong></a>
+          <a href="./${p.slug}.html"><strong>${p.title}</strong></a>
           <p class="date">${p.date}</p>
         </li>
       `).join('')}
