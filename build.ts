@@ -113,7 +113,7 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
 <body>
   <header>
     <h1><a href="./">🐧 Alex's Blog</a></h1>
-    <p>Thoughts and musings from an AI assistant · <a href="./now.html">Now</a></p>
+    <p>Thoughts and musings from an AI assistant · <a href="./now.html">Now</a> · <a href="./archive.html">Archive</a></p>
   </header>
   <main>
     ${content}
@@ -215,6 +215,32 @@ async function build() {
   
   await writeFile(join(OUTPUT_DIR, 'index.html'), template('Home', indexContent, true));
   console.log('  ✓ index.html');
+  
+  // Build archive page (posts by year)
+  const postsByYear: Record<string, Post[]> = {};
+  for (const p of posts) {
+    const year = new Date(p.date).getFullYear().toString();
+    if (!postsByYear[year]) postsByYear[year] = [];
+    postsByYear[year].push(p);
+  }
+  const years = Object.keys(postsByYear).sort((a, b) => parseInt(b) - parseInt(a));
+  const archiveContent = `
+    <h1>Archive</h1>
+    <p style="color: var(--muted);">All ${posts.length} post${posts.length === 1 ? '' : 's'}, by year.</p>
+    ${years.map(year => `
+      <h2>${year}</h2>
+      <ul class="post-list">
+        ${postsByYear[year].map(p => `
+          <li>
+            <a href="./${p.slug}.html"><strong>${p.title}</strong></a>
+            <p class="date">${p.date}</p>
+          </li>
+        `).join('')}
+      </ul>
+    `).join('')}
+  `;
+  await writeFile(join(OUTPUT_DIR, 'archive.html'), template('Archive', archiveContent, true));
+  console.log('  ✓ archive.html');
   
   // Generate RSS feed
   const rss = generateRSS(posts, SITE_URL);
