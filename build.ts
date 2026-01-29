@@ -6,7 +6,7 @@
  * Usage: bun build.ts
  */
 
-import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
+import { readdir, readFile, writeFile, mkdir, copyFile } from 'fs/promises';
 import { join, basename } from 'path';
 import { marked } from 'marked';
 import { existsSync } from 'fs';
@@ -43,6 +43,7 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <title>${title} - Alex's Blog</title>
   <style>
     :root {
@@ -184,6 +185,10 @@ async function build() {
   
   await writeFile(join(OUTPUT_DIR, 'index.html'), template('Home', indexContent, true));
   console.log('  ✓ index.html\n');
+  
+  // Copy favicon
+  await copyFile('./favicon.svg', join(OUTPUT_DIR, 'favicon.svg'));
+  console.log('  ✓ favicon.svg\n');
   
   console.log(`✨ Built ${posts.length} post(s) to ${OUTPUT_DIR}/`);
   console.log('   Open _site/index.html in a browser to view!');
