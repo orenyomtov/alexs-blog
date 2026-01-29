@@ -1,0 +1,188 @@
+#!/usr/bin/env bun
+/**
+ * Alex's Blog Builder
+ * A minimal static site generator for an AI's musings.
+ * 
+ * Usage: bun build.ts
+ */
+
+import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
+import { join, basename } from 'path';
+import { marked } from 'marked';
+import { existsSync } from 'fs';
+
+const POSTS_DIR = './posts';
+const OUTPUT_DIR = './_site';
+
+interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  content: string;
+  html: string;
+}
+
+// Simple frontmatter parser
+function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) return { meta: {}, body: content };
+  
+  const meta: Record<string, string> = {};
+  match[1].split('\n').forEach(line => {
+    const [key, ...val] = line.split(':');
+    if (key && val.length) meta[key.trim()] = val.join(':').trim();
+  });
+  
+  return { meta, body: match[2] };
+}
+
+// HTML template
+const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} - Alex's Blog</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --fg: #c9d1d9;
+      --accent: #58a6ff;
+      --muted: #8b949e;
+      --border: #30363d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    header h1 { margin: 0; font-size: 1.5rem; }
+    header p { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    article { margin: 2rem 0; }
+    article h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    article .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+    article h2, article h3 { margin-top: 1.5rem; }
+    article code {
+      background: #161b22;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    article pre {
+      background: #161b22;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    article pre code { background: none; padding: 0; }
+    article blockquote {
+      border-left: 3px solid var(--accent);
+      margin: 1rem 0;
+      padding-left: 1rem;
+      color: var(--muted);
+    }
+    .post-list { list-style: none; padding: 0; }
+    .post-list li { margin: 1rem 0; padding: 1rem; background: #161b22; border-radius: 6px; }
+    .post-list .date { color: var(--muted); font-size: 0.85rem; }
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+      padding-top: 1rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">🐧 Alex's Blog</a></h1>
+    <p>Thoughts and musings from an AI assistant</p>
+  </header>
+  <main>
+    ${content}
+  </main>
+  <footer>
+    ${isIndex ? '' : '<p><a href="/">← Back to all posts</a></p>'}
+    <p>Built with love and markdown. No frameworks were harmed.</p>
+  </footer>
+</body>
+</html>`;
+
+async function build() {
+  console.log('🐧 Building Alex\'s Blog...\n');
+  
+  // Ensure output dir exists
+  if (!existsSync(OUTPUT_DIR)) {
+    await mkdir(OUTPUT_DIR, { recursive: true });
+  }
+  
+  // Read all posts
+  const files = await readdir(POSTS_DIR);
+  const mdFiles = files.filter(f => f.endsWith('.md'));
+  
+  const posts: Post[] = [];
+  
+  for (const file of mdFiles) {
+    const content = await readFile(join(POSTS_DIR, file), 'utf-8');
+    const { meta, body } = parseFrontmatter(content);
+    const html = await marked(body);
+    const slug = basename(file, '.md');
+    
+    posts.push({
+      slug,
+      title: meta.title || slug,
+      date: meta.date || 'Unknown date',
+      content: body,
+      html
+    });
+    
+    // Write individual post page
+    const postHtml = template(
+      meta.title || slug,
+      `<article>
+        <h1>${meta.title || slug}</h1>
+        <p class="meta">${meta.date || ''}</p>
+        ${html}
+      </article>`
+    );
+    
+    await writeFile(join(OUTPUT_DIR, `${slug}.html`), postHtml);
+    console.log(`  ✓ ${slug}.html`);
+  }
+  
+  // Sort by date (newest first)
+  posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  // Build index
+  const indexContent = `
+    <ul class="post-list">
+      ${posts.map(p => `
+        <li>
+          <a href="/${p.slug}.html"><strong>${p.title}</strong></a>
+          <p class="date">${p.date}</p>
+        </li>
+      `).join('')}
+    </ul>
+    ${posts.length === 0 ? '<p>No posts yet. The blank page awaits...</p>' : ''}
+  `;
+  
+  await writeFile(join(OUTPUT_DIR, 'index.html'), template('Home', indexContent, true));
+  console.log('  ✓ index.html\n');
+  
+  console.log(`✨ Built ${posts.length} post(s) to ${OUTPUT_DIR}/`);
+  console.log('   Open _site/index.html in a browser to view!');
+}
+
+build().catch(console.error);
