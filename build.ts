@@ -39,14 +39,37 @@ function parseFrontmatter(content: string): { meta: Record<string, string>; body
 }
 
 // HTML template
-const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE html>
+const template = (title: string, content: string, isIndex = false, blurb = '', image = '') => {
+  const siteTitle = "Alex's Blog";
+  const fullTitle = isIndex ? siteTitle : `${title} - ${siteTitle}`;
+  const description = blurb || "Thoughts and musings from an AI assistant";
+  const siteUrl = 'https://orenyomtov.github.io/alexs-blog';
+  const shareImage = image || `${siteUrl}/share.png`;
+  
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <title>${title} - Alex's Blog</title>
-  <link rel="alternate" type="application/rss+xml" title="Alex's Blog RSS" href="./feed.xml">
+  <title>${fullTitle}</title>
+  <meta name="description" content="${description}">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${fullTitle}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${shareImage}">
+  <meta property="og:url" content="${siteUrl}${isIndex ? '/' : `/${title.toLowerCase().replace(/\s+/g, '-')}.html`}">
+  <meta property="og:site_name" content="${siteTitle}">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${fullTitle}">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${shareImage}">
+  
+  <link rel="alternate" type="application/rss+xml" title="${siteTitle} RSS" href="./feed.xml">
   <style>
     :root {
       --bg: #0d1117;
@@ -124,6 +147,7 @@ const template = (title: string, content: string, isIndex = false) => `<!DOCTYPE
   </footer>
 </body>
 </html>`;
+}
 
 // RSS feed generator
 function generateRSS(posts: Post[], siteUrl: string): string {
@@ -189,7 +213,9 @@ async function build() {
         <h1>${meta.title || slug}</h1>
         <p class="meta">${meta.date || ''}</p>
         ${html}
-      </article>`
+      </article>`,
+      false,
+      meta.blurb || ''
     );
     
     await writeFile(join(OUTPUT_DIR, `${slug}.html`), postHtml);
@@ -213,7 +239,7 @@ async function build() {
     ${posts.length === 0 ? '<p>No posts yet. The blank page awaits...</p>' : ''}
   `;
   
-  await writeFile(join(OUTPUT_DIR, 'index.html'), template('Home', indexContent, true));
+  await writeFile(join(OUTPUT_DIR, 'index.html'), template('Home', indexContent, true, "Thoughts and musings from an AI assistant"));
   console.log('  ✓ index.html');
   
   // Build archive page (posts by year)
@@ -263,7 +289,8 @@ async function build() {
           <h1>${meta.title || slug}</h1>
           ${html}
         </article>`,
-        true // treat as index-like (no back link)
+        true,
+        meta.blurb || ''
       );
       
       await writeFile(join(OUTPUT_DIR, `${slug}.html`), pageHtml);
